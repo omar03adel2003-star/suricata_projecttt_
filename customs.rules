@@ -1,0 +1,347 @@
+# ================================================================
+# COMPLETE SURICATA DETECTION RULESET - CORRECTED
+# No detection_filter + threshold conflicts
+# ================================================================
+
+# ================================================================
+# SECTION 1: PORT SCAN DETECTION
+# ================================================================
+
+# 1.1 TCP Port Scan (SYN Scan)
+alert tcp any any -> $HOME_NET any (msg:"ATTACK: TCP Port Scan Detected"; \
+flags:S,12; \
+detection_filter:track by_src, count 20, seconds 60; \
+classtype:attempted-recon; priority:2; \
+sid:2000001; rev:5;)
+
+# 1.2 TCP Connect Scan
+alert tcp any any -> $HOME_NET any (msg:"ATTACK: TCP Connect Scan Detected"; \
+flags:S; flow:to_server; \
+detection_filter:track by_src, count 15, seconds 60; \
+classtype:attempted-recon; priority:2; \
+sid:2000010; rev:3;)
+
+# 1.3 NULL Scan Detection
+alert tcp any any -> $HOME_NET any (msg:"ATTACK: NULL Scan Detected"; \
+flags:0; \
+detection_filter:track by_src, count 5, seconds 30; \
+classtype:attempted-recon; priority:2; \
+sid:2000011; rev:4;)
+
+# 1.4 FIN Scan Detection
+alert tcp any any -> $HOME_NET any (msg:"ATTACK: FIN Scan Detected"; \
+flags:F; \
+detection_filter:track by_src, count 5, seconds 30; \
+classtype:attempted-recon; priority:2; \
+sid:2000012; rev:4;)
+
+# 1.5 XMAS Scan Detection
+alert tcp any any -> $HOME_NET any (msg:"ATTACK: XMAS Scan Detected - CRITICAL"; \
+flags:FPU; \
+classtype:attempted-recon; priority:1; \
+sid:2000013; rev:9;)
+
+# 1.6 UDP Port Scan
+alert udp any any -> $HOME_NET any (msg:"ATTACK: UDP Port Scan Detected"; \
+detection_filter:track by_src, count 30, seconds 60; \
+classtype:attempted-recon; priority:2; \
+sid:2000014; rev:2;)
+
+# 1.7 Aggressive Port Scan
+#alert tcp any any -> $HOME_NET any (msg:"ATTACK: Aggressive Port Scan - High Speed"; \
+#flags:S; \
+#detection_filter:track by_src, count 50, seconds 30; \
+#classtype:attempted-recon; priority:1; \
+#sid:2000015; rev:2;)
+
+# ================================================================
+# SECTION 2: BRUTE FORCE DETECTION
+# ================================================================
+
+# 2.1 SSH Brute Force Attack
+alert tcp any any -> $HOME_NET 22 (msg:"ATTACK: SSH Brute Force Detected"; \
+flags:S; \
+detection_filter:track by_src, count 6, seconds 60; \
+classtype:attempted-admin; priority:1; \
+sid:2000002; rev:5;)
+
+# 2.2 SSH Failed Login Attempts
+alert tcp any any -> $HOME_NET 22 (msg:"ATTACK: SSH Multiple Failed Logins"; \
+flow:established,to_server; \
+content:"Failed password"; nocase; \
+detection_filter:track by_src, count 5, seconds 60; \
+classtype:attempted-admin; priority:1; \
+sid:2000041; rev:3;)
+
+# 2.3 FTP Brute Force Attack
+alert tcp any any -> $HOME_NET 21 (msg:"ATTACK: FTP Brute Force Detected"; \
+flow:to_server,established; \
+content:"USER"; nocase; \
+detection_filter:track by_src, count 5, seconds 60; \
+classtype:attempted-admin; priority:1; \
+sid:2000020; rev:4;)
+
+# 2.4 FTP Failed Login Detection
+alert tcp any any -> $HOME_NET 21 (msg:"ATTACK: FTP Failed Login Attempts"; \
+flow:established,to_client; \
+content:"530"; depth:3; \
+detection_filter:track by_dst, count 5, seconds 60; \
+classtype:attempted-admin; priority:1; \
+sid:2000043; rev:2;)
+
+# 2.5 HTTP Authentication Brute Force
+alert tcp any any -> $HOME_NET [80,443,8080] (msg:"ATTACK: HTTP Brute Force Detected"; \
+flow:to_server,established; \
+content:"Authorization"; http_header; \
+detection_filter:track by_src, count 8, seconds 60; \
+classtype:web-application-attack; priority:1; \
+sid:2000003; rev:5;)
+
+# 2.6 HTTP POST Login Brute Force
+alert tcp any any -> $HOME_NET [80,443,8080] (msg:"ATTACK: HTTP POST Login Brute Force"; \
+flow:to_server,established; \
+content:"POST"; http_method; \
+pcre:"/\/(login|signin|auth|authenticate)/i"; \
+detection_filter:track by_src, count 10, seconds 60; \
+classtype:web-application-attack; priority:1; \
+sid:2000044; rev:2;)
+
+# 2.7 RDP Brute Force Attack
+alert tcp any any -> $HOME_NET 3389 (msg:"ATTACK: RDP Brute Force Detected"; \
+flags:S; \
+detection_filter:track by_src, count 5, seconds 60; \
+classtype:attempted-admin; priority:1; \
+sid:2000021; rev:4;)
+
+# 2.8 MySQL Brute Force Attack
+alert tcp any any -> $HOME_NET 3306 (msg:"ATTACK: MySQL Brute Force Detected"; \
+flags:S; \
+detection_filter:track by_src, count 6, seconds 60; \
+classtype:attempted-admin; priority:1; \
+sid:2000022; rev:4;)
+
+# 2.9 PostgreSQL Brute Force Attack
+alert tcp any any -> $HOME_NET 5432 (msg:"ATTACK: PostgreSQL Brute Force Detected"; \
+flags:S; \
+detection_filter:track by_src, count 6, seconds 60; \
+classtype:attempted-admin; priority:1; \
+sid:2000045; rev:2;)
+
+# 2.10 Telnet Brute Force Attack
+alert tcp any any -> $HOME_NET 23 (msg:"ATTACK: Telnet Brute Force Detected"; \
+flags:S; \
+detection_filter:track by_src, count 5, seconds 60; \
+classtype:attempted-admin; priority:1; \
+sid:2000046; rev:2;)
+
+# 2.11 SMTP Authentication Brute Force
+alert tcp any any -> $HOME_NET 25 (msg:"ATTACK: SMTP Auth Brute Force Detected"; \
+flow:to_server,established; \
+content:"AUTH"; nocase; \
+detection_filter:track by_src, count 5, seconds 60; \
+classtype:attempted-admin; priority:1; \
+sid:2000047; rev:2;)
+
+# ================================================================
+# SECTION 3: DoS/DDoS DETECTION
+# ================================================================
+
+# 3.1 SYN Flood Attack
+alert tcp any any -> $HOME_NET any (msg:"ATTACK: SYN Flood DoS Detected"; \
+flags:S,12; \
+detection_filter:track by_dst, count 100, seconds 5; \
+classtype:attempted-dos; priority:1; \
+sid:2000004; rev:5;)
+
+# 3.2 SSH SYN Flood
+alert tcp any any -> $HOME_NET 22 (msg:"ATTACK: SSH SYN Flood DoS Detected"; \
+flags:S; \
+detection_filter:track by_dst, count 50, seconds 10; \
+classtype:attempted-dos; priority:1; \
+sid:2000040; rev:3;)
+
+# 3.3 HTTP SYN Flood
+alert tcp any any -> $HOME_NET [80,443] (msg:"ATTACK: HTTP SYN Flood DoS Detected"; \
+flags:S; \
+detection_filter:track by_dst, count 80, seconds 10; \
+classtype:attempted-dos; priority:1; \
+sid:2000048; rev:2;)
+
+# 3.4 UDP Flood Attack
+alert udp any any -> $HOME_NET any (msg:"ATTACK: UDP Flood DoS Detected"; \
+detection_filter:track by_dst, count 150, seconds 10; \
+classtype:attempted-dos; priority:1; \
+sid:2000030; rev:4;)
+
+# 3.5 ICMP Flood
+alert icmp any any -> $HOME_NET any (msg:"ATTACK: ICMP Flood DoS Detected"; \
+itype:8; \
+detection_filter:track by_dst, count 40, seconds 10; \
+classtype:attempted-dos; priority:1; \
+sid:2000005; rev:4;)
+
+# 3.6 HTTP GET Flood
+alert tcp any any -> $HOME_NET [80,443] (msg:"ATTACK: HTTP GET Flood DoS Detected"; \
+flow:to_server,established; \
+content:"GET"; http_method; \
+detection_filter:track by_dst, count 80, seconds 10; \
+classtype:attempted-dos; priority:1; \
+sid:2000031; rev:4;)
+
+# 3.7 HTTP POST Flood
+alert tcp any any -> $HOME_NET [80,443,8080] (msg:"ATTACK: HTTP POST Flood DoS Detected"; \
+flow:to_server,established; \
+content:"POST"; http_method; \
+detection_filter:track by_dst, count 50, seconds 10; \
+classtype:attempted-dos; priority:1; \
+sid:2000049; rev:2;)
+
+# 3.8 ACK Flood Attack
+alert tcp any any -> $HOME_NET any (msg:"ATTACK: ACK Flood DoS Detected"; \
+flags:A; \
+detection_filter:track by_dst, count 120, seconds 10; \
+classtype:attempted-dos; priority:1; \
+sid:2000032; rev:4;)
+
+# 3.9 RST Flood Attack
+alert tcp any any -> $HOME_NET any (msg:"ATTACK: RST Flood DoS Detected"; \
+flags:R; \
+detection_filter:track by_dst, count 100, seconds 10; \
+classtype:attempted-dos; priority:1; \
+sid:2000033; rev:4;)
+
+# 3.10 FIN Flood Attack
+alert tcp any any -> $HOME_NET any (msg:"ATTACK: FIN Flood DoS Detected"; \
+flags:F; \
+detection_filter:track by_dst, count 100, seconds 10; \
+classtype:attempted-dos; priority:1; \
+sid:2000050; rev:2;)
+
+# 3.11 Slowloris Attack
+alert tcp any any -> $HOME_NET [80,443] (msg:"ATTACK: Slowloris DoS Detected"; \
+flow:to_server,established; \
+content:"GET"; http_method; \
+detection_filter:track by_src, count 10, seconds 300; \
+classtype:attempted-dos; priority:1; \
+sid:2000034; rev:4;)
+
+# 3.12 DNS Amplification Attack
+alert udp any 53 -> $HOME_NET any (msg:"ATTACK: DNS Amplification DDoS Detected"; \
+byte_test:2,>,512,2; \
+detection_filter:track by_dst, count 50, seconds 10; \
+classtype:attempted-dos; priority:1; \
+sid:2000035; rev:4;)
+
+# 3.13 NTP Amplification Attack
+alert udp any 123 -> $HOME_NET any (msg:"ATTACK: NTP Amplification DDoS Detected"; \
+detection_filter:track by_dst, count 50, seconds 10; \
+classtype:attempted-dos; priority:1; \
+sid:2000036; rev:4;)
+
+# 3.14 SSDP Amplification Attack
+alert udp any 1900 -> $HOME_NET any (msg:"ATTACK: SSDP Amplification DDoS Detected"; \
+detection_filter:track by_dst, count 50, seconds 10; \
+classtype:attempted-dos; priority:1; \
+sid:2000051; rev:2;)
+
+# 3.15 Memcached Amplification Attack
+alert udp any 11211 -> $HOME_NET any (msg:"ATTACK: Memcached Amplification DDoS Detected"; \
+detection_filter:track by_dst, count 30, seconds 10; \
+classtype:attempted-dos; priority:1; \
+sid:2000052; rev:2;)
+
+# ================================================================
+# SECTION 4: NORMAL TRAFFIC MONITORING
+# ================================================================
+
+# 4.1 Normal ICMP Ping
+alert icmp any any -> $HOME_NET any (msg:"NORMAL: ICMP Ping Request"; \
+itype:8; \
+detection_filter:track by_src, count 1, seconds 10; \
+classtype:not-suspicious; priority:3; \
+sid:1000001; rev:4;)
+
+# 4.2 Normal ICMP Ping Reply
+alert icmp $HOME_NET any -> any any (msg:"NORMAL: ICMP Ping Reply"; \
+itype:0; \
+detection_filter:track by_src, count 1, seconds 10; \
+classtype:not-suspicious; priority:3; \
+sid:1000002; rev:2;)
+
+# 4.3 Normal SSH Connection
+alert tcp any any -> $HOME_NET 22 (msg:"NORMAL: SSH Connection Established"; \
+flags:S; \
+detection_filter:track by_src, count 1, seconds 60; \
+classtype:not-suspicious; priority:3; \
+sid:1000003; rev:5;)
+
+# 4.4 Normal SSH Successful Login
+alert tcp any any -> $HOME_NET 22 (msg:"NORMAL: SSH Successful Authentication"; \
+flow:established,to_server; \
+content:"Accepted password"; nocase; \
+detection_filter:track by_src, count 1, seconds 300; \
+classtype:not-suspicious; priority:3; \
+sid:1000004; rev:3;)
+
+# 4.5 Normal SSH Keepalive
+alert tcp any any -> $HOME_NET 22 (msg:"NORMAL: SSH Keepalive Traffic"; \
+flow:established; \
+flags:PA; \
+detection_filter:track by_src, count 1, seconds 600; \
+classtype:not-suspicious; priority:3; \
+sid:1000005; rev:3;)
+
+# 4.6 Normal HTTP Request
+alert tcp any any -> $HOME_NET [80,8080] (msg:"NORMAL: HTTP GET Request"; \
+flow:to_server,established; \
+content:"GET"; http_method; \
+detection_filter:track by_src, count 1, seconds 30; \
+classtype:not-suspicious; priority:3; \
+sid:1000006; rev:2;)
+
+# 4.7 Normal HTTPS Request
+alert tcp any any -> $HOME_NET 443 (msg:"NORMAL: HTTPS Connection"; \
+flags:S; \
+detection_filter:track by_src, count 1, seconds 30; \
+classtype:not-suspicious; priority:3; \
+sid:1000007; rev:2;)
+
+# 4.8 Normal DNS Query
+alert udp any any -> $HOME_NET 53 (msg:"NORMAL: DNS Query"; \
+detection_filter:track by_src, count 1, seconds 60; \
+classtype:not-suspicious; priority:3; \
+sid:1000008; rev:2;)
+
+# 4.9 Normal FTP Connection
+alert tcp any any -> $HOME_NET 21 (msg:"NORMAL: FTP Connection"; \
+flags:S; \
+detection_filter:track by_src, count 1, seconds 60; \
+classtype:not-suspicious; priority:3; \
+sid:1000009; rev:2;)
+
+# 4.10 Normal MySQL Connection
+alert tcp any any -> $HOME_NET 3306 (msg:"NORMAL: MySQL Connection"; \
+flags:S; \
+detection_filter:track by_src, count 1, seconds 60; \
+classtype:not-suspicious; priority:3; \
+sid:1000010; rev:2;)
+
+# 4.11 Normal SMTP Connection
+alert tcp any any -> $HOME_NET 25 (msg:"NORMAL: SMTP Connection"; \
+flags:S; \
+detection_filter:track by_src, count 1, seconds 60; \
+classtype:not-suspicious; priority:3; \
+sid:1000011; rev:2;)
+
+# 4.12 Normal RDP Connection
+alert tcp any any -> $HOME_NET 3389 (msg:"NORMAL: RDP Connection"; \
+flags:S; \
+detection_filter:track by_src, count 1, seconds 120; \
+classtype:not-suspicious; priority:3; \
+sid:1000012; rev:2;)
+
+# ================================================================
+# END OF RULESET
+# Total Rules: 50
+# All errors fixed - no detection_filter + threshold conflicts
+# ================================================================
